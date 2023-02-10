@@ -1,0 +1,1 @@
+INSERT INTO diary_limit (agency, account, date_transaction, value_transaction) VALUES (223, 8820, now(), 2000);
