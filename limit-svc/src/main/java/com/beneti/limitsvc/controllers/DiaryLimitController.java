@@ -32,4 +32,15 @@ public class DiaryLimitController {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
     }
 
+    @GetMapping("/{agency}/{account}")
+    public DiaryLimit getDiaryLimit(@PathVariable("agency") final Long agency, @PathVariable("account") final Long account) {
+        final Optional<DiaryLimit> diaryLimit = diaryLimitService.getDiaryLimit(agency, account);
+
+        if(diaryLimit.isPresent()) {
+            return diaryLimit.get();
+        }
+
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
+    }
+
 }
