@@ -1,6 +1,14 @@
 server:
   port: 8081
 spring:
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: limits-svc
+      key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: latest
+      enable-auto-commit: true
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/limits
@@ -10,7 +18,7 @@ spring:
   jpa:
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQL94Dialect
+        dialect: org.hibernate.dialect.PostgresSQL94Dialect
         temp:
           use_jdbc_metadata_defaults: false
     hibernate:
@@ -21,3 +29,8 @@ spring:
 
 limit:
   value: 2000
+
+app:
+  topic: transaction
+  returnTopic: transaction_return
+

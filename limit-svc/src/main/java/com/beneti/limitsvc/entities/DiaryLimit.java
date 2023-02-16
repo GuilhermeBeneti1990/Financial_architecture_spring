@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table
@@ -21,5 +22,7 @@ public class DiaryLimit {
     private Long account;
 
     private BigDecimal value;
+
+    private LocalDateTime date;
 
 }

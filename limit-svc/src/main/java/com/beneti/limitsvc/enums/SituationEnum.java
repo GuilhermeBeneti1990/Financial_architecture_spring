@@ -1,10 +1,10 @@
-package com.beneti.transactionsvc.enums;
+package com.beneti.limitsvc.enums;
 
 public enum SituationEnum {
     ANALYSED,
     NOT_ANALYSED,
     HUMAN_ANALYSING,
-    APPROVED,
     FRAUD_SUSPECT,
+    APPROVED,
     CONFIRMED_RISK
 }

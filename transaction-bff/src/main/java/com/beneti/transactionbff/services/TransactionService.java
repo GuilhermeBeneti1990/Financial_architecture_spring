@@ -5,7 +5,9 @@ import com.beneti.transactionbff.dto.TransactionDto;
 import com.beneti.transactionbff.redis.TransactionRedisRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.QueryTimeoutException;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetryTemplate;
@@ -21,16 +23,25 @@ public class TransactionService {
 
     private TransactionRedisRepository transactionRedisRepository;
 
-    @Autowired
     private RetryTemplate retryTemplate;
 
-    public TransactionService(TransactionRedisRepository transactionRedisRepository) {
+    private ReactiveKafkaProducerTemplate<String, RequestTransactionDto> reactiveKafkaProducerTemplate;
+
+    @Value("${app.topic}")
+    private String topic;
+
+    public TransactionService(TransactionRedisRepository transactionRedisRepository, RetryTemplate retryTemplate,
+                              ReactiveKafkaProducerTemplate<String, RequestTransactionDto> reactiveKafkaProducerTemplate) {
         this.transactionRedisRepository = transactionRedisRepository;
+        this.retryTemplate = retryTemplate;
+        this.reactiveKafkaProducerTemplate = reactiveKafkaProducerTemplate;
     }
 
     @Transactional
     public Optional<TransactionDto> save(final RequestTransactionDto requestTransactionDto) {
         requestTransactionDto.setDate(LocalDateTime.now());
+        reactiveKafkaProducerTemplate.send(topic, requestTransactionDto)
+                .doOnSuccess(voidSenderResult -> log.info(voidSenderResult.toString()));
         return Optional.of(transactionRedisRepository.save(requestTransactionDto));
     }
 
