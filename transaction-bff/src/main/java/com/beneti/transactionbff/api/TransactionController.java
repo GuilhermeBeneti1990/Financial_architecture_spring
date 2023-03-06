@@ -29,7 +29,6 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(description = "Create transaction")
     @ResponseBody
     @ApiResponses(value = {
@@ -38,12 +37,9 @@ public class TransactionController {
             @ApiResponse(responseCode = "403", description = "Authorization error"),
             @ApiResponse(responseCode = "404", description = "Resource not found"),
     })
-    public Mono<TransactionDto> sendTransaction(@RequestBody final RequestTransactionDto requestTransactionDto) {
-        final Optional<TransactionDto> transactionDto = transactionService.save(requestTransactionDto);
-        if(transactionDto.isPresent()) {
-            return Mono.just(transactionDto.get());
-        }
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unable to find resource");
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<RequestTransactionDto> sendTransaction(@RequestBody final RequestTransactionDto requestTransactionDto) {
+        return transactionService.save(requestTransactionDto);
     }
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)

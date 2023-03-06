@@ -7,6 +7,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.decorators.Decorators;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -24,22 +25,26 @@ public class LimitService {
         this.diaryLimitClient = diaryLimitClient;
     }
 
-    public DiaryLimit getDiaryLimit(final Long agency, final Long account) {
+    public Mono<DiaryLimit> getDiaryLimit(final Long agency, final Long account) {
 
-        var diaryLimitSup = fallback(agency, account);
+        return getDiaryLimitSupplier(agency, account);
 
-        return diaryLimitSup.get();
     }
 
-    private Supplier<DiaryLimit> fallback(final Long agency, final Long account) {
-        var diaryLimitSup = countCircuitBreaker.decorateSupplier(() -> diaryLimitClient.getDiaryLimit(agency, account));
+    private Mono<DiaryLimit> getDiaryLimitSupplier(final Long agency, final Long account) {
+        var diaryLimitSup = countCircuitBreaker.decorateSupplier(() ->
+                diaryLimitClient.getDiaryLimit(agency, account)
+        );
 
-        return Decorators
-                .ofSupplier(diaryLimitSup)
-                .withCircuitBreaker(countCircuitBreaker)
-                .withFallback(Arrays.asList(CallNotPermittedException.class),
-                        e -> this.getStaticLimit())
-                .decorate();
+        return Mono.fromSupplier(Decorators
+                    .ofSupplier(diaryLimitSup)
+                    .withCircuitBreaker(countCircuitBreaker)
+                    .withFallback(Arrays.asList(CallNotPermittedException.class),
+                            e -> this.getStaticLimit())
+                    .decorate()
+        );
+
+
     }
 
     private DiaryLimit getStaticLimit() {

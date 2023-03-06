@@ -2,9 +2,10 @@ package com.beneti.transactionbff.services;
 
 import com.beneti.transactionbff.dto.RequestTransactionDto;
 import com.beneti.transactionbff.dto.TransactionDto;
+import com.beneti.transactionbff.enums.SituationEnum;
+import com.beneti.transactionbff.exceptions.NotFoundException;
 import com.beneti.transactionbff.redis.TransactionRedisRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
@@ -13,6 +14,8 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -38,11 +41,27 @@ public class TransactionService {
     }
 
     @Transactional
-    public Optional<TransactionDto> save(final RequestTransactionDto requestTransactionDto) {
-        requestTransactionDto.setDate(LocalDateTime.now());
-        reactiveKafkaProducerTemplate.send(topic, requestTransactionDto)
-                .doOnSuccess(voidSenderResult -> log.info(voidSenderResult.toString()));
-        return Optional.of(transactionRedisRepository.save(requestTransactionDto));
+    @Retryable(value = QueryTimeoutException.class, maxAttempts = 5, backoff = @Backoff(delay = 100))
+    public Mono<RequestTransactionDto> save(final RequestTransactionDto requestTransactionDto) {
+        return Mono.fromCallable(() -> {
+            requestTransactionDto.setDate(LocalDateTime.now());
+            requestTransactionDto.setSituationEnum(SituationEnum.NOT_ANALISED);
+            return transactionRedisRepository.save(requestTransactionDto);
+        }).doOnError(throwable -> {
+                    log.error(throwable.getMessage(), throwable);
+                    throw new NotFoundException("Unable to find resource");
+                })
+                .doOnSuccess(requestTransactionDto1 -> {
+                    log.info("Transaction sended with successfully - {}", requestTransactionDto1);
+                    reactiveKafkaProducerTemplate.send(topic, requestTransactionDto)
+                            .doOnSuccess(voidSenderResult -> log.info(voidSenderResult.toString()))
+                            .subscribe();
+                })
+                .doFinally(signalType -> {
+                    if(signalType.compareTo(SignalType.ON_COMPLETE) == 0) {
+                        log.info("Message sended to kafka: {}", requestTransactionDto);
+                    }
+                });
     }
 
 //    @Retryable(value = QueryTimeoutException.class, maxAttempts = 5, backoff = @Backoff(delay = 100))

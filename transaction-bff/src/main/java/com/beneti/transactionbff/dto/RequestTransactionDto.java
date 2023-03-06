@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@ToString
+@ToString(of = {"uuid", "situationEnum"})
 @Schema(description = "Transaction object represents a transaction promise")
 public class RequestTransactionDto extends TransactionDto{
 
